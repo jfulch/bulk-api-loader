@@ -5,8 +5,6 @@ import logging
 import os
 import json
 
-import os
-
 # Values from user input
 CSV_FILE_PATH = os.getenv('CSV_FILE_PATH')  # File to import, default if not set
 zuora_obj = os.getenv('ZUORA_OBJ')  # Zuora object to update

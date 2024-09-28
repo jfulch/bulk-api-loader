@@ -1,5 +1,7 @@
 import os
 from nicegui import ui
+import subprocess
+import json
 
 @ui.page('/')
 def main_page():
@@ -14,12 +16,16 @@ def main_page():
                 action = ui.select(label='Action', options=['Create', 'Update'], value='Update').style('width: 600px;')
                 zuora_user_name = ui.input(label='Zuora User Name').style('width: 600px;')
                 zuora_password = ui.input(label='Zuora Password').props('type=password').style('width: 600px;')
+                csv_file = ui.upload(label='Upload CSV File').style('width: 600px;')
                 #client_id = ui.input(label='Client ID').style('width: 600px;')
                 #client_secret = ui.input(label='Client Secret').style('width: 600px;')
             
             submit_button = ui.button('Submit').style('margin-top: 20px;')
+            loading_spinner = ui.spinner().style('display: none; margin-top: 20px;')
+            log_display = ui.textarea(label='Log').props('readonly').style('width: 600px; height: 200px; margin-top: 20px;')
 
             def handle_submit():
+                print("Submit button clicked")  # Debug log
                 os.environ['ZUORA_AUTH_URL'] = zuora_auth_url.value
                 os.environ['API_URL'] = zuora_api_url.value
                 os.environ['ZUORA_OBJ'] = zuora_object.value
@@ -29,8 +35,29 @@ def main_page():
                 #os.environ['CLIENT_ID'] = client_id.value
                 #os.environ['CLIENT_SECRET'] = client_secret.value
 
-                # Call zuora_import.py or any other processing function here
+                # Show loading spinner and clear log
+                loading_spinner.style('display: block;')
+                log_display.value = ''
 
+            def on_upload(event):
+                print("File uploaded")  # Debug log
+                uploaded_file = event['file']
+                if uploaded_file['name'].endswith('.csv'):
+                    file_content = uploaded_file['content'].decode('utf-8')
+                    print("File content received")  # Debug log
+                    # Pass the file content to the zuora_import_basic_auth.py script
+                    process = subprocess.Popen(['python3', 'zuora_import_basic_auth.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    stdout, stderr = process.communicate(input=json.dumps(file_content))
+                    print("Subprocess completed")  # Debug log
+                    # Hide loading spinner
+                    loading_spinner.style('display: none;')
+                    # Update log display
+                    log_display.value = stdout + '\n' + stderr
+                    print("Log updated")  # Debug log
+                else:
+                    ui.notify('Please upload a CSV file.', color='red')
+
+            csv_file.on('upload', on_upload)
             submit_button.on('click', handle_submit)
 
 ui.run()
